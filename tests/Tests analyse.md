@@ -10,20 +10,20 @@
 		Вывод:
 		![[Pasted image 20261112003949.png|634]]
 
-3) **tries**
+2) **tries**
 	1) Группа: A-06-23
 	2) Тест: 3
 	Вывод:
 	![[Pasted image 20261112004332.png]]
-4) **dossier**
+3) **dossier**
 	1) Фамилия: Sudbinin
 	Вывод:
 	![[Pasted image 20261112004526.png]]
-5) **best**
+4) **best**
 	1) Группа: A-06-18
 	Вывод:
 	![[Pasted image 20261112010002.png]]
-6) **attendance**
+5) **attendance**
 	1) Группа: Ae-21-21
 	2) Начальная пара: 1
 	3) Конечная пара: 8
