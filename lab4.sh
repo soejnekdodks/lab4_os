@@ -11,7 +11,7 @@ usage() {
     echo "  top <группа>                       лидеры по оценкам 5, 4 и 3"
     echo "  tries <группа> <предмет> <тест>     количество попыток"
     echo "  dossier <начало_ФИО>               досье по началу ФИО"
-    echo "  best <группа> <предмет>            лучший результат по годам"
+    echo "  best <предмет>                     лучший результат по годам"
     echo "  attend <группа> <начало> <конец>   посещаемость по парам 1..18"
     echo "  menu                               интерактивное меню"
     echo "Предмет: 1 = ${SUBJECTS[0]}, 2 = ${SUBJECTS[1]} или полное название"
@@ -287,16 +287,15 @@ run_dossier() {
     fi
 }
 
-# Для каждого года сравниваем суммы правильных ответов внутри группы.
+# Для каждого года сравниваем суммы правильных ответов по всем группам.
 run_best() {
-    check_group
     SUBJECT=$(subject_name "$SUBJECT") || exit 1
     check_tests
-    load_group
-    # Одна позиция массивов соответствует одной паре «год, студент».
+    # Одна позиция массивов соответствует студенту своей группы в одном году.
     YEAR_COUNT=0
     YEARS=()  # Год каждой записи.
-    PEOPLE=()  # Индекс студента в списке группы.
+    PEOPLE=()  # ФИО студента.
+    STUDENT_GROUPS=()  # Группа студента.
     TOTALS=()  # Сумма по всем четырём тестам.
     T1=()  # T1–T4 хранят слагаемые этой суммы.
     T2=()
@@ -305,52 +304,46 @@ run_best() {
     for test in 1 2 3 4; do
         test_file="$DATA/$SUBJECT/tests/TEST-$test"
         while IFS=';' read -r row_group row_name row_date row_correct row_grade || [ -n "$row_group" ]; do
-            if [ "$row_group" == "$GROUP" ]; then
-                grade=${row_grade:0:1}
-                # Для годовой суммы берём успешные попытки с оценками 3–5.
-                if [ "$grade" == "3" ] || [ "$grade" == "4" ] || [ "$grade" == "5" ]; then
-                    find_name "$row_name"
-                    if [ "$INDEX" -ge 0 ]; then
-                        # Первые четыре символа даты задают год попытки.
-                        year=${row_date:0:4}
-                        # Ищем накопленную сумму этого студента за тот же год.
-                        pos=-1
-                        i=0
-                        while [ "$i" -lt "$YEAR_COUNT" ]; do
-                            if [ "${YEARS[$i]}" == "$year" ] && [ "${PEOPLE[$i]}" -eq "$INDEX" ]; then
-                                pos=$i  # Нашли существующую запись за этот год.
-                            fi
-                            i=$((i+1))
-                        done
-                        # При первом результате заводим студенту отдельную запись за год.
-                        if [ "$pos" -lt 0 ]; then
-                            pos=$YEAR_COUNT  # Индекс новой записи.
-                            YEAR_COUNT=$((YEAR_COUNT+1))
-                            YEARS[$pos]=$year
-                            PEOPLE[$pos]=$INDEX
-                            TOTALS[$pos]=0
-                            T1[$pos]=0
-                            T2[$pos]=0
-                            T3[$pos]=0
-                            T4[$pos]=0
-                        fi
-                        # Сумма по году и её разбивка по отдельным тестам.
-                        TOTALS[$pos]=$((TOTALS[pos]+row_correct))
-                        if [ "$test" == "1" ]; then
-                            T1[$pos]=$((T1[pos]+row_correct))
-                        elif [ "$test" == "2" ]; then
-                            T2[$pos]=$((T2[pos]+row_correct))
-                        elif [ "$test" == "3" ]; then
-                            T3[$pos]=$((T3[pos]+row_correct))
-                        else
-                            T4[$pos]=$((T4[pos]+row_correct))
-                        fi
+            grade=${row_grade:0:1}
+            # В сумму входят только успешные попытки с оценками 3–5.
+            if [ "$grade" == "3" ] || [ "$grade" == "4" ] || [ "$grade" == "5" ]; then
+                year=${row_date:0:4}
+                # ФИО вместе с группой отличает студентов с одинаковыми именами.
+                pos=-1
+                i=0
+                while [ "$i" -lt "$YEAR_COUNT" ]; do
+                    if [ "${YEARS[$i]}" == "$year" ] && [ "${STUDENT_GROUPS[$i]}" == "$row_group" ] && [ "${PEOPLE[$i]}" == "$row_name" ]; then
+                        pos=$i
                     fi
+                    i=$((i+1))
+                done
+                if [ "$pos" -lt 0 ]; then
+                    pos=$YEAR_COUNT
+                    YEAR_COUNT=$((YEAR_COUNT+1))
+                    YEARS[$pos]=$year
+                    STUDENT_GROUPS[$pos]=$row_group
+                    PEOPLE[$pos]=$row_name
+                    TOTALS[$pos]=0
+                    T1[$pos]=0
+                    T2[$pos]=0
+                    T3[$pos]=0
+                    T4[$pos]=0
+                fi
+                # Сохраняем общую сумму и вклад каждого теста.
+                TOTALS[$pos]=$((TOTALS[pos]+row_correct))
+                if [ "$test" == "1" ]; then
+                    T1[$pos]=$((T1[pos]+row_correct))
+                elif [ "$test" == "2" ]; then
+                    T2[$pos]=$((T2[pos]+row_correct))
+                elif [ "$test" == "3" ]; then
+                    T3[$pos]=$((T3[pos]+row_correct))
+                else
+                    T4[$pos]=$((T4[pos]+row_correct))
                 fi
             fi
         done < "$test_file"
     done
-    echo "Группа $GROUP, $SUBJECT: сумма правильных ответов успешных попыток"
+    echo "$SUBJECT: сумма правильных ответов успешных попыток"
     i=0
     while [ "$i" -lt "$YEAR_COUNT" ]; do
         year=${YEARS[$i]}
@@ -375,8 +368,7 @@ run_best() {
                 fi
                 j=$((j+1))
             done
-            person=${PEOPLE[$winner]}
-            echo "$year: ${NAMES[$person]} — $max"
+            echo "$year: ${PEOPLE[$winner]} (${STUDENT_GROUPS[$winner]}) — $max"
             echo "  По тестам: TEST-1=${T1[$winner]}, TEST-2=${T2[$winner]}, TEST-3=${T3[$winner]}, TEST-4=${T4[$winner]}"
         fi
         i=$((i+1))
@@ -482,11 +474,13 @@ menu_request() {
         return
     fi
 
-    read -r -p "Группа: " GROUP || exit 0
-    # Проверяем группу до запроса предмета или границ интервала.
-    if ! problem=$(check_group 2>&1); then
-        echo "$problem" >&2
-        return
+    if [ "$choice" != "4" ]; then
+        read -r -p "Группа: " GROUP || exit 0
+        # Проверяем группу до запроса предмета или границ интервала.
+        if ! problem=$(check_group 2>&1); then
+            echo "$problem" >&2
+            return
+        fi
     fi
     if [ "$choice" == "2" ] || [ "$choice" == "4" ]; then
         echo "1) ${SUBJECTS[0]}   2) ${SUBJECTS[1]}"
@@ -501,7 +495,7 @@ menu_request() {
         read -r -p "Тест (1..4): " TEST || exit 0
         bash "$0" tries "$DATA" "$GROUP" "$SUBJECT" "$TEST"
     elif [ "$choice" == "4" ]; then
-        bash "$0" best "$DATA" "$GROUP" "$SUBJECT"
+        bash "$0" best "$DATA" "$SUBJECT"
     else
         read -r -p "Начальная пара: " START || exit 0
         read -r -p "Конечная пара: " END || exit 0
@@ -540,9 +534,8 @@ elif [ "$MODE" == "dossier" ]; then
     PREFIX=$3
     run_dossier
 elif [ "$MODE" == "best" ]; then
-    if [ $# -ne 4 ]; then error "для best нужны группа и предмет" 1; fi
-    GROUP=$3
-    SUBJECT=$4
+    if [ $# -ne 3 ]; then error "для best нужен предмет" 1; fi
+    SUBJECT=$3
     run_best
 elif [ "$MODE" == "attend" ]; then
     if [ $# -ne 5 ]; then error "для attend нужны группа, начало и конец интервала" 1; fi

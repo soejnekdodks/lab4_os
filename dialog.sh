@@ -46,18 +46,20 @@ request() {
         ask "Досье" "Введите начало ФИО" || return
         result=$(bash ./lab4.sh dossier "$DATA" "$ANSWER" 2>&1)
     else
-        ask "Группа" "Введите номер группы" || return
-        group=$ANSWER
-        # Среди файлов группы ищем точное имя до перехода к следующему окну.
-        found=0
-        for group_file in "$DATA/students/groups/"*; do
-            if [ "$group_file" == "$DATA/students/groups/$group" ] && [ -f "$group_file" ]; then
-                found=1
+        if [ "$mode" != "4" ]; then
+            ask "Группа" "Введите номер группы" || return
+            group=$ANSWER
+            # Среди файлов группы ищем точное имя до перехода к следующему окну.
+            found=0
+            for group_file in "$DATA/students/groups/"*; do
+                if [ "$group_file" == "$DATA/students/groups/$group" ] && [ -f "$group_file" ]; then
+                    found=1
+                fi
+            done
+            if [ "$found" -eq 0 ]; then
+                window --title "Ошибка" --msgbox "Группа не найдена: $group" 8 70
+                return
             fi
-        done
-        if [ "$found" -eq 0 ]; then
-            window --title "Ошибка" --msgbox "Группа не найдена: $group" 8 70
-            return
         fi
         if [ "$mode" == "2" ] || [ "$mode" == "4" ]; then
             # Имя каталога остаётся значением пункта. На экране видно только описание.
@@ -73,7 +75,7 @@ request() {
             test=$ANSWER
             result=$(bash ./lab4.sh tries "$DATA" "$group" "$subject" "$test" 2>&1)
         elif [ "$mode" == "4" ]; then
-            result=$(bash ./lab4.sh best "$DATA" "$group" "$subject" 2>&1)
+            result=$(bash ./lab4.sh best "$DATA" "$subject" 2>&1)
         else
             ask "Интервал" "Начальная пара (1–18)" || return
             start=$ANSWER
