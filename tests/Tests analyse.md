@@ -106,7 +106,6 @@ bash lab4.sh attend fixtures/labfiles-3-26 G-1 1 5
  ![[Pasted image 20261112122047.png]]
 
 Отдельно крайние случаи:
-
 ```bash
 bash lab4.sh tries fixtures/labfiles-3-26 G-0 Цирковое_Дело 1
 bash lab4.sh best fixtures/labfiles-3-26 G-0 Цирковое_Дело
@@ -115,6 +114,7 @@ bash lab4.sh attend fixtures/labfiles-3-26 G-1 5 1
 bash lab4.sh attend fixtures/missing-attendance G-1 1 5
 bash lab4.sh tries 'fixtures/data with spaces' G-1 Цирковое_Дело 1
 ```
+Крайние случаи и проверка программы на искусственных данных также соответствует ожидаемым результатам.
 ### Замечания
 1) Довольно неудобно целиком вводить предмет. Целесообразно предложить пользователю выбор с помощью ввода цифры - 1 или 2, что соответствует выбранному предмету.
 ![[Pasted image 20261112004050.png]]
